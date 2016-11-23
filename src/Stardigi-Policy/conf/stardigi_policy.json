@@ -1,0 +1,18 @@
+{
+	"db": {
+	    "type": "mysql",
+	    "datasource": "root:123456@tcp(10.132.46.82:3306)/machine?charset=utf8&loc=Asia%2FShanghai"
+	},
+	"prometheus" : {
+		"promethus_addr" : "10.132.46.80",
+		"promethus_port" : "9090",
+		"promethus_group" : "slave",
+		"promethus_job" : "dcos"
+	},
+	"mesos" : {
+		"mesos_urls" : "10.132.46.81;10.132.46.82;10.132.46.83"
+	},
+	"marathon" : {
+		"marathon_name" : "admin"
+	}
+}
