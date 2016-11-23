@@ -1,8 +1,0 @@
-From centos:7.2.1511	
-MAINTAINER  xianan <xianan@stardigi.com.cn>
-
-RUN mkdir /exporter/tomcat_exporter
-COPY tomcat_exporter /exporter/tomcat_exporter
-
-ENTRYPOINT ["/exporter/tomcat_exporter"]
-EXPOSE     9241

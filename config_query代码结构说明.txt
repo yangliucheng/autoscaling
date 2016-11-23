@@ -1,6 +1,0 @@
-代码结构：
-	（1）config_query.py 配置管理RESTful API 
-	 (2) db_operation.py 数据库的链接与操作
-	 (3) set_get.py 一些公共方法
-接口详情：
-	查看 弹性扩缩容配置管理接口说明(终版).txt
