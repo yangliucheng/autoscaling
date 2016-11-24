@@ -6,7 +6,6 @@ import (
 	"Stardigi-Policy/model/db"
 	"flag"
 	"fmt"
-	"github.com/astaxie/beego"
 	"os"
 	"os/signal"
 )
@@ -23,7 +22,6 @@ func main() {
 	go controllers.PRun()
 	go controllers.MRun(policy)
 	go controllers.SRun(policy)
-	beego.Run()
 	Run()
 }
 

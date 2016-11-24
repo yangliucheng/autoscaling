@@ -49,6 +49,9 @@ func SRun(policy *config.PolicyConfig) {
 		case ruleDown := <-RuleDownChan:
 			// fmt.Println(ruleDown)
 			// 执行缩容操作
+
+			// 问题：速度太快,导致一条规则多次加入扩缩容的策略
+			// 考虑添加控制语句要求上次规则必须使用完毕
 			scaleJobs(ruleDown, policy)
 
 		case <-signals:
@@ -60,16 +63,13 @@ func SRun(policy *config.PolicyConfig) {
 
 func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
+	var wait sync.WaitGroup
 	for _, rule := range rules {
-
+		wait.Add(1)
 		//每条规则启动线程扩缩容
-		go func(rule db.AppScaleRule) {
-			appInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
-			var exit bool = false
-			// 判断有没有达到收集冷切时间
+		go func(rule db.AppScaleRule, wait *sync.WaitGroup) {
 
-			// 每一条规则
-			//判断有没有达到扩缩容冷切时间
+			appInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
 			var lastTimeScale int64 = 0
 			currentTimeScale := time.Now().Unix()
 			if v, ok := LastScale.Get(appInfo); ok {
@@ -77,8 +77,15 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 			}
 			// 数据库中以分为单位
 			if currentTimeScale-lastTimeScale < int64(rule.ColdTime*60) {
+				wait.Done()
 				return
 			}
+
+			var exit bool = false
+			// 判断有没有达到收集冷切时间
+
+			// 每一条规则
+			//判断有没有达到扩缩容冷切时间
 
 			memChan := make(chan bool, 3)
 			cpuChan := make(chan bool, 3)
@@ -103,7 +110,6 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 						if len(counter["memory"]) == matched || len(counter["cpu"]) == matched || len(counter["ha_queue"]) == matched || len(counter["thread"]) == matched {
 							// 执行扩缩容
 							// 清空数据，防止再次进入
-							fmt.Println("==========", len(counter["memory"]), len(counter["cpu"]))
 
 							SetChanNull(counter)
 
@@ -114,6 +120,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 						appscaledInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
 						LastScale.Set(appscaledInfo, time.Now().Unix())
 						exit = true
+						wait.Done()
 						return
 					}
 				}
@@ -154,8 +161,9 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 					matchJobs(rule, metrics[appInfo], counter)
 				}
 			}
-		}(rule)
+		}(rule, &wait)
 	}
+	wait.Wait()
 }
 
 /**
