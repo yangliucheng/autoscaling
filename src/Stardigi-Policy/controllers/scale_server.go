@@ -290,10 +290,9 @@ func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan 
 			// 发送成功后，退出整个goroutine
 			case response := <-responseChan:
 				if response.StatusCode == 200 {
-					// byt, _ := ioutil.ReadAll(response.Body)
-					// fmt.Println(rule.AppId, "扩缩容成功,扩容数目为", scaleInstance, "扩缩容类型为：", rule.ScaleType, "返回结果是：", string(byt))
+					byt, _ := ioutil.ReadAll(response.Body)
+					fmt.Println(rule.AppId, "扩缩容成功,扩容数目为", scaleInstance, "扩缩容类型为：", rule.ScaleType, "返回结果是：", string(byt))
 					finScaled <- true
-					fmt.Println("=======成功=======")
 					event := utils.StringJoin("扩缩容执行成功,扩缩容类型为: ", rule.ScaleType)
 					InsertLog(event, rule.ContinuePeriod, rule)
 					return
