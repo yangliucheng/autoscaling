@@ -4,6 +4,7 @@ import (
 	"Stardigi-Policy/model/db"
 	"Stardigi-Policy/utils"
 	"strconv"
+	// "sync"
 )
 
 type Scale struct {

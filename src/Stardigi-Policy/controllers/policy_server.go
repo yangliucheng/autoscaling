@@ -33,12 +33,15 @@ var (
 	QuotaInfos   = make(map[string]db.QuotaInfo, 0)
 )
 
+var mutex sync.Mutex
+
 func PRun() {
 	// 收集错误信息，写入日志
 
 	error_c := make(chan error, 1)
 
 	// 启动后台程序判断是否发生错误
+
 	go func() {
 		signals := make(chan os.Signal, 0)
 		signal.Notify(signals, os.Interrupt, os.Kill)
@@ -46,7 +49,7 @@ func PRun() {
 		// 初始化
 		for {
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(5 * time.Second):
 				// finishRule由scale模块控制
 				if len(RuleUpChan) == 0 && len(RuleDownChan) == 0 {
 
@@ -73,12 +76,11 @@ func GetRuleFromDB(ruleUpChan, ruleDownChan chan []db.AppScaleRule, error_c chan
 
 	appScaleRule := new(db.AppScaleRule)
 	var appScaleRules []db.AppScaleRule
-
-	go func(appScaleRule *db.AppScaleRule, appScaleRules []db.AppScaleRule, error_c chan error) {
-
+	var waitRule sync.WaitGroup
+	waitRule.Add(2)
+	go func(appScaleRule *db.AppScaleRule, appScaleRules []db.AppScaleRule, wait *sync.WaitGroup, error_c chan error) {
 		// 由于等待数据库完成查询和分离扩缩容信息
-		var waitRule sync.WaitGroup
-		waitRule.Add(2)
+
 		// switch == 1 means scale enable
 		err := s.QueryTable(appScaleRule).Filter("switch", "1").All(&appScaleRules)
 		if err != nil {
@@ -123,9 +125,11 @@ func GetRuleFromDB(ruleUpChan, ruleDownChan chan []db.AppScaleRule, error_c chan
 			go selectRules(appScaleRules, "down", ruleDownChan, &waitRule)
 
 		}
-		waitRule.Wait()
-		waitMysql.Done()
-	}(appScaleRule, appScaleRules, error_c)
+
+	}(appScaleRule, appScaleRules, &waitRule, error_c)
+
+	waitRule.Wait()
+	waitMysql.Done()
 
 	go func(error_c chan error) {
 
@@ -164,7 +168,9 @@ func selectRules(appScaleRules []db.AppScaleRule, name string, appScaleRule chan
 			rule = append(rule, r)
 		}
 	}
+	mutex.Lock()
 	appScaleRule <- rule
+	mutex.Unlock()
 	wait.Done()
 
 	return

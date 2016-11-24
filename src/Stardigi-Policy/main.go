@@ -6,6 +6,7 @@ import (
 	"Stardigi-Policy/model/db"
 	"flag"
 	"fmt"
+	"github.com/astaxie/beego"
 	"os"
 	"os/signal"
 )
@@ -18,11 +19,11 @@ func main() {
 	if err != nil {
 		fmt.Println("===err==", err)
 	}
-
 	db.NewDBClient(policy.Db.Type, policy.Db.Datasource)
-	controllers.PRun()
-	controllers.MRun(policy)
-	controllers.SRun(policy)
+	go controllers.PRun()
+	go controllers.MRun(policy)
+	go controllers.SRun(policy)
+	beego.Run()
 	Run()
 }
 

@@ -1,7 +1,7 @@
 {
 	"db": {
 	    "type": "mysql",
-	    "datasource": "root:123456@tcp(10.132.46.82:3306)/machine?charset=utf8&loc=Asia%2FShanghai"
+	    "datasource": "root:root@tcp(192.168.67.132:3306)/scale?charset=utf8&loc=Asia%2FShanghai"
 	},
 	"prometheus" : {
 		"promethus_addr" : "10.132.46.80",

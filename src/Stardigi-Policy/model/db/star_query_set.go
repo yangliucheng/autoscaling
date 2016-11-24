@@ -2,7 +2,7 @@ package db
 
 import (
 	"Stardigi-Policy/utils"
-	// "fmt"
+	"fmt"
 	"reflect"
 )
 
@@ -25,7 +25,7 @@ func NewStarQuerySet(dbClient *DBclient) QuerySet {
 func (star StarQuerySet) Filter(col string, arg interface{}) QuerySet {
 
 	var strCon string
-	strSql := <-star.DbClient.StrChan
+	strSql := star.DbClient.StrSql
 	//判断之前是否有条件存在
 	if !star.Cond {
 		strSql = utils.StringJoin(strSql, " where ")
@@ -42,7 +42,7 @@ func (star StarQuerySet) Filter(col string, arg interface{}) QuerySet {
 	// "SELECT * from ", table, " where col = arg AND "
 
 	// 保存查询语句
-	star.DbClient.StrChan <- strCon
+	star.DbClient.StrSql = strCon
 	return star
 }
 
@@ -93,10 +93,9 @@ func (star StarQuerySet) One(container interface{}, cols ...string) error {
 
 func (star StarQuerySet) ReadRows(object interface{}) ([][]string, error) {
 	// 获取dbclient
-	db := <-star.DbClient.Db
-
+	db := star.DbClient.Db
 	// 获取sql语句
-	strChan := <-star.DbClient.StrChan
+	strChan := star.DbClient.StrSql
 	numContainer := utils.NumberOfContainer(object)
 	rowContainer := make([][]string, 0)
 	rows, err := db.Query(strChan)
@@ -112,6 +111,7 @@ func (star StarQuerySet) ReadRows(object interface{}) ([][]string, error) {
 	for rows.Next() {
 		err = rows.Scan(col...)
 		if err != nil {
+			fmt.Println("======scan发送错误======", err)
 			return rowContainer, err
 		}
 		colContainer := make([]string, 0)
@@ -124,6 +124,6 @@ func (star StarQuerySet) ReadRows(object interface{}) ([][]string, error) {
 		}
 		rowContainer = append(rowContainer, colContainer)
 	}
-	star.DbClient.Db <- db
+
 	return rowContainer, nil
 }
