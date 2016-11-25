@@ -5,7 +5,6 @@ set -ex
 ###############################
 #        CONSTANT             #
 ###############################
-PACKAGE_FROM=$1
 PROGRAM=autoscaling
 CURRENT_DIR=$(cd "$(dirname "$0")"; pwd)
 PAAS_DIR=/home/paas
@@ -23,14 +22,15 @@ function pre() {
 	fi
 	mkdir -p -m 700 ${RUN_DIR}
 	mkdir -p -m 700 ${PACKAGE_TO}
+
+	cp ${CURRENT_DIR}/autoscaling.tgz ${PACKAGE_TO}
 }
 
 function install_() {
-	cd ${PACKAGE_FROM}
-	cp autoscaling.tgz ${PACKAGE_TO}
-	cd -
+
 	cd ${PACKAGE_TO}
 	tar -xvzf autoscaling.tgz -C ${PAAS_DIR}
+	cp ${CURRENT_DIR}/stardigi_policy.json ${RUN_DIR}/conf
 	cd -
 }
 
