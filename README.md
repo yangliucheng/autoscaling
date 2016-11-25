@@ -10,6 +10,7 @@
 * 配置文件主目录文件stardigi_policy.json
  ![image](http://github.com/yangliucheng/autoscaling/raw/develop/golang/doc/1.jpg)
 * bash deploy/deploy.sh
+* ps -ef | grep Stardigi-Policy查看程序的运行状态
 
 # questions remaining
 ## 多线程问题
