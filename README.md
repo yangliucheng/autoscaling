@@ -1,7 +1,7 @@
 # autoscaling：the auto scaling module
 
 # build program
-* bash build/build.sh <package_name> <br/>
+* bash build/build.sh {package_name} <br/>
 * 打包后tar包放在bin目录
 * 复制{package_name}-v1.1.tgz（目前版本是1.1）到目标机器
 
