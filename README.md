@@ -7,8 +7,8 @@
 
 # deploy program
 * 获取上一步的{package_name}-v1.1.tgz后，解压到任意目录
-* 配置文件主目录文件stardigi_policy.json
-![image](http://github.com/yangliucheng/autoscaling/raw/develop/golang/doc/1.jpg)
+* 配置文件主目录文件stardigi_policy.json<br/>
+![image](https://github.com/yangliucheng/autoscaling/blob/develop/golang/doc/1.jpg)
 * bash deploy/deploy.sh
 * ps -ef | grep Stardigi-Policy查看程序的运行状态
 
