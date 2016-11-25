@@ -65,8 +65,17 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
 	var wait sync.WaitGroup
 	for _, rule := range rules {
+
+		// 用于保证每次规则执行完毕
+		// 防止多次相同的规则进入
+		// 原因是，冷切时间以marathon_name,app_id,scale_type为标识，并没有包括后面的扩容策略
+		// 导致多次“被认为是相同的规则”获取了未记录扩容或者指标收集时间之前的记录
+		//  因此多条相同的信息会导致结果都满足扩缩容而执行扩缩容
+		// 这个问题下一个版本考虑较好的解决方案
 		wait.Add(1)
 		//每条规则启动线程扩缩容
+		// 每一条规则
+		//判断有没有达到扩缩容冷切时间
 		go func(rule db.AppScaleRule, wait *sync.WaitGroup) {
 
 			appInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
@@ -83,9 +92,6 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
 			var exit bool = false
 			// 判断有没有达到收集冷切时间
-
-			// 每一条规则
-			//判断有没有达到扩缩容冷切时间
 
 			memChan := make(chan bool, 3)
 			cpuChan := make(chan bool, 3)
@@ -131,7 +137,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 				if exit {
 					return
 				}
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Second)
 
 				//先判断有收集冷切时间有没有达到
 				//暂时方案，考虑该冷切时间的判断放到metric_server.go中
