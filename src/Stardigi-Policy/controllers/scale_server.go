@@ -23,9 +23,13 @@ import (
 var LastScale *utils.SyncMap
 var LastCollect *utils.SyncMap
 
+// 用于判断当前正扩缩容的规则是否完成，或者是否移除
+var scaling *utils.SyncMap
+
 func init() {
 	LastScale = utils.NewSyncMap()
 	LastCollect = utils.NewSyncMap()
+	scaling = utils.NewSyncMap()
 }
 
 // // 定义全局变量存储每条记录上次扩容时间
@@ -38,8 +42,19 @@ func SRun(policy *config.PolicyConfig) {
 
 	signals := make(chan os.Signal, 0)
 	signal.Notify(signals, os.Interrupt, os.Kill)
-	fin := make(chan bool, 1)
-	fin <- true
+	// 启动协程老化scaling中的数据
+	go func() {
+		for {
+			select {
+			case <-time.After(1 * time.Second):
+				scaling.Age()
+			case <-signals:
+				fmt.Println("由于系统执行了中断命令，扩缩容程序退出...")
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case ruleUp := <-RuleUpChan:
@@ -49,7 +64,6 @@ func SRun(policy *config.PolicyConfig) {
 		case ruleDown := <-RuleDownChan:
 			// fmt.Println(ruleDown)
 			// 执行缩容操作
-
 			// 问题：速度太快,导致一条规则多次加入扩缩容的策略
 			// 考虑添加控制语句要求上次规则必须使用完毕
 			scaleJobs(ruleDown, policy)
@@ -63,20 +77,27 @@ func SRun(policy *config.PolicyConfig) {
 
 func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
-	var wait sync.WaitGroup
+	// var wait sync.WaitGroup
 	for _, rule := range rules {
-
+		ruleFlag := utils.StructJoin(&rule)
+		//查看map是否存在这条规则
+		if _, ok := scaling.Get(ruleFlag); ok {
+			// 说明规则正在扩缩容
+			continue
+		}
+		scaling.Set(ruleFlag, true)
+		// scaling.Set()
 		// 用于保证每次规则执行完毕
 		// 防止多次相同的规则进入
 		// 原因是，冷切时间以marathon_name,app_id,scale_type为标识，并没有包括后面的扩容策略
 		// 导致多次“被认为是相同的规则”获取了未记录扩容或者指标收集时间之前的记录
 		//  因此多条相同的信息会导致结果都满足扩缩容而执行扩缩容
 		// 这个问题下一个版本考虑较好的解决方案
-		wait.Add(1)
+		// wait.Add(1)
 		//每条规则启动线程扩缩容
 		// 每一条规则
 		//判断有没有达到扩缩容冷切时间
-		go func(rule db.AppScaleRule, wait *sync.WaitGroup) {
+		go func(rule db.AppScaleRule) {
 
 			appInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
 			var lastTimeScale int64 = 0
@@ -85,8 +106,8 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 				lastTimeScale = v.(int64)
 			}
 			// 数据库中以分为单位
-			if currentTimeScale-lastTimeScale < int64(rule.ColdTime*60) {
-				wait.Done()
+			if currentTimeScale-lastTimeScale < int64(rule.ColdTime*5) {
+				// wait.Done()
 				return
 			}
 
@@ -113,6 +134,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
 					select {
 					case <-time.After(5 * time.Second):
+						fmt.Println("=======counter=======", len(counter["memory"]), len(counter["cpu"]), len(counter["ha_queue"]), len(counter["thread"]))
 						if len(counter["memory"]) == matched || len(counter["cpu"]) == matched || len(counter["ha_queue"]) == matched || len(counter["thread"]) == matched {
 							// 执行扩缩容
 							// 清空数据，防止再次进入
@@ -126,7 +148,8 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 						appscaledInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
 						LastScale.Set(appscaledInfo, time.Now().Unix())
 						exit = true
-						wait.Done()
+						ruleFlag := utils.StructJoin(&rule)
+						scaling.Set(ruleFlag, false)
 						return
 					}
 				}
@@ -137,7 +160,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 				if exit {
 					return
 				}
-				time.Sleep(1 * time.Second)
+				// time.Sleep(1 * time.Second)
 
 				//先判断有收集冷切时间有没有达到
 				//暂时方案，考虑该冷切时间的判断放到metric_server.go中
@@ -147,7 +170,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 					lastTimeCollect = v.(int64)
 				}
 
-				if currentTimeCollect-lastTimeCollect < int64(rule.CollectPeriod*60) {
+				if currentTimeCollect-lastTimeCollect < int64(rule.CollectPeriod*5) {
 					continue
 				}
 				//已达到时间
@@ -167,9 +190,10 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 					matchJobs(rule, metrics[appInfo], counter)
 				}
 			}
-		}(rule, &wait)
+		}(rule)
 	}
-	wait.Wait()
+	// wait.Wait()
+	// fmt.Println("=======wait over=========")
 }
 
 /**
@@ -317,6 +341,7 @@ func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan 
 
 func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map[string]chan bool) {
 
+	fmt.Println("========matchJobs===================")
 	app := utils.StringJoin(rule.MarathonName, rule.AppId)
 
 	if rule.Memory == 1 {

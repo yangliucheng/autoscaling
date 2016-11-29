@@ -102,6 +102,7 @@ func (star StarQuerySet) ReadRows(object interface{}) ([][]string, error) {
 	if err != nil {
 		return rowContainer, err
 	}
+	defer rows.Close()
 	col := make([]interface{}, numContainer)
 	for i := range col {
 		var co interface{}

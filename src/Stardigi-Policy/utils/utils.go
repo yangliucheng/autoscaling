@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	// "fmt"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -17,6 +18,27 @@ func StringJoin(str ...string) string {
 	}
 
 	return buffer.String()
+}
+
+func InterfaceJoin(in ...interface{}) string {
+
+	var buffer bytes.Buffer
+	for _, s := range in {
+		switch s.(type) {
+		case int:
+			buffer.WriteString(strconv.Itoa(s.(int)))
+		case string:
+			buffer.WriteString(s.(string))
+		}
+	}
+	return buffer.String()
+}
+
+func StructJoin(object interface{}) string {
+
+	_, field := ParaseInterface(object)
+	str := InterfaceJoin(field...)
+	return str
 }
 
 func ParaseUrlParam(url string, params map[string]string) string {

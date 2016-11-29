@@ -11,6 +11,7 @@ import (
 )
 
 var pConfig *string = flag.String("pConfig", "conf/stardigi_policy.json", "configuration of stardigi-policy")
+var log *string = flag.String("logfile", "/home/paas/autoscaling.log", "log file")
 
 func main() {
 	flag.Parse()

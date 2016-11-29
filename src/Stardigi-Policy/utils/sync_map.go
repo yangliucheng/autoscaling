@@ -36,6 +36,25 @@ func (syncMap *SyncMap) Get(key string) (value interface{}, ok bool) {
 	return
 }
 
+func (syncMap *SyncMap) Del(key string) {
+
+	syncMap.RwMutex.Lock()
+	delete(syncMap.ConcurrentMap, key)
+	syncMap.RwMutex.Unlock()
+}
+
+/**
+ * 老化value为false的字段
+ */
+func (syncMap *SyncMap) Age() {
+
+	for k, v := range syncMap.ConcurrentMap {
+		if !v.(bool) {
+			delete(syncMap.ConcurrentMap, k)
+		}
+	}
+}
+
 /**
  * bkdr哈希算法，对字符串的每个字符转成unit64位，并和hash*seed相加得到
  * 哈希算法是根据提供的key生成固定的为一个较短的整型
