@@ -413,11 +413,11 @@ func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, err
 		apps := utils.StringJoin(app, mtyp)
 		quota := QuotaInfos[apps]
 		if strings.EqualFold(styp, "up") {
-			if valeOfFloat64 > quota.MaxThreshold {
+			if valeOfFloat64 > quota.MaxThreshold*0.01 {
 				return true, nil
 			}
 		} else if strings.EqualFold(styp, "down") {
-			if valeOfFloat64 < quota.MinThreshold {
+			if valeOfFloat64 < quota.MinThreshold*0.01 {
 				return true, nil
 			}
 		}

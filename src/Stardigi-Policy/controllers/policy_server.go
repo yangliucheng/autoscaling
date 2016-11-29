@@ -52,7 +52,6 @@ func PRun() {
 			case <-time.After(1 * time.Second):
 				// finishRule由scale模块控制
 				if len(RuleUpChan) == 0 && len(RuleDownChan) == 0 {
-
 					GetRuleFromDB(RuleUpChan, RuleDownChan, error_c)
 				}
 
@@ -80,15 +79,14 @@ func GetRuleFromDB(ruleUpChan, ruleDownChan chan []db.AppScaleRule, error_c chan
 	waitRule.Add(2)
 	go func(appScaleRule *db.AppScaleRule, appScaleRules []db.AppScaleRule, wait *sync.WaitGroup, error_c chan error) {
 		// 由于等待数据库完成查询和分离扩缩容信息
-
 		// switch == 1 means scale enable
 		err := s.QueryTable(appScaleRule).Filter("switch", "1").All(&appScaleRules)
 		if err != nil {
+			fmt.Println("查询数据库出错", err)
 			waitMysql.Done()
 			error_c <- err
 			return
 		}
-
 		// 计算up和down的存在情况
 		countUpAndDown := 0
 		countUp := 0
