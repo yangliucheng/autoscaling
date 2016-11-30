@@ -77,28 +77,22 @@ func SRun(policy *config.PolicyConfig) {
 
 func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
-	// var wait sync.WaitGroup
 	for _, rule := range rules {
 		ruleFlag := utils.StructJoin(&rule)
 		//查看map是否存在这条规则
-		if _, ok := scaling.Get(ruleFlag); ok {
+		if v, ok := scaling.Get(ruleFlag); ok {
 			// 说明规则正在扩缩容
-			continue
+			if v.(bool) {
+				continue
+			}
 		}
+
 		scaling.Set(ruleFlag, true)
-		// scaling.Set()
-		// 用于保证每次规则执行完毕
-		// 防止多次相同的规则进入
-		// 原因是，冷切时间以marathon_name,app_id,scale_type为标识，并没有包括后面的扩容策略
-		// 导致多次“被认为是相同的规则”获取了未记录扩容或者指标收集时间之前的记录
-		//  因此多条相同的信息会导致结果都满足扩缩容而执行扩缩容
-		// 这个问题下一个版本考虑较好的解决方案
-		// wait.Add(1)
+
 		//每条规则启动线程扩缩容
 		// 每一条规则
 		//判断有没有达到扩缩容冷切时间
 		go func(rule db.AppScaleRule) {
-
 			appInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
 			var lastTimeScale int64 = 0
 			currentTimeScale := time.Now().Unix()
@@ -106,8 +100,8 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 				lastTimeScale = v.(int64)
 			}
 			// 数据库中以分为单位
-			if currentTimeScale-lastTimeScale < int64(rule.ColdTime*5) {
-				// wait.Done()
+			if currentTimeScale-lastTimeScale < int64(rule.ColdTime*60) {
+				scaling.Set(ruleFlag, false)
 				return
 			}
 
@@ -126,6 +120,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
 			// // 启动检查程序
 			// // 问题：启动了多个次协程
+
 			go func(rule db.AppScaleRule, counter map[string]chan bool) {
 				//标识扩缩容完成
 				finScaled := make(chan bool, 1)
@@ -134,7 +129,6 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 
 					select {
 					case <-time.After(5 * time.Second):
-						fmt.Println("=======counter=======", len(counter["memory"]), len(counter["cpu"]), len(counter["ha_queue"]), len(counter["thread"]))
 						if len(counter["memory"]) == matched || len(counter["cpu"]) == matched || len(counter["ha_queue"]) == matched || len(counter["thread"]) == matched {
 							// 执行扩缩容
 							// 清空数据，防止再次进入
@@ -160,7 +154,6 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 				if exit {
 					return
 				}
-				// time.Sleep(1 * time.Second)
 
 				//先判断有收集冷切时间有没有达到
 				//暂时方案，考虑该冷切时间的判断放到metric_server.go中
@@ -170,7 +163,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 					lastTimeCollect = v.(int64)
 				}
 
-				if currentTimeCollect-lastTimeCollect < int64(rule.CollectPeriod*5) {
+				if currentTimeCollect-lastTimeCollect < int64(rule.CollectPeriod*60) {
 					continue
 				}
 				//已达到时间
@@ -183,6 +176,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 					//
 					matchJobs(rule, metrics[appInfo], counter)
 				} else if strings.EqualFold(rule.ScaleType, "down") {
+
 					RulesDown <- rule
 					// Metrics为无缓存通道
 					metrics := <-MetricsDown
@@ -192,8 +186,6 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 			}
 		}(rule)
 	}
-	// wait.Wait()
-	// fmt.Println("=======wait over=========")
 }
 
 /**
@@ -216,7 +208,6 @@ func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan 
 			responseMesosChan, errChan := starRequestGen.DoHttpRequest("GetMarathonUrl", nil, nil, nil, "")
 
 			for {
-				time.Sleep(1 * time.Second)
 				select {
 				// 并发执行http请求，只要name属性和policy.Marathons.MarathonName则退出
 				case f := <-finMesos:
@@ -341,7 +332,6 @@ func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan 
 
 func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map[string]chan bool) {
 
-	fmt.Println("========matchJobs===================")
 	app := utils.StringJoin(rule.MarathonName, rule.AppId)
 
 	if rule.Memory == 1 {
@@ -363,6 +353,7 @@ func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map
 	}
 
 	if rule.Cpu == 1 {
+
 		flag, err := matchJob(metrics, app, "cpu", rule.ScaleType)
 		if flag {
 			//计数器加一
@@ -399,7 +390,6 @@ func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map
 	}
 
 	if rule.HaQueue == 1 {
-		time.Sleep(10000 * time.Second)
 		flag, err := matchJob(metrics, app, "ha_queue", rule.ScaleType)
 		if flag {
 			//计数器加一
@@ -420,16 +410,18 @@ func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map
 }
 
 func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, error) {
+
 	metricsData := metrics[mtyp]
+
 	if len(metricsData.Datas.Results) == 0 {
 		err := errors.New("获取指标信息失败")
 		fmt.Println("从Prometheus查询到的", mtyp, "数据为空,应用信息：", app)
 		return false, err
 	}
-
 	for _, value := range metricsData.Datas.Results {
 		// 转换成float64
 		valeOfFloat64, err := strconv.ParseFloat(value.Values[1].(string), 64)
+
 		if err != nil {
 			fmt.Println("转成float时出现错误", err)
 			return false, err
@@ -437,11 +429,14 @@ func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, err
 		// 获取配额信息
 		apps := utils.StringJoin(app, mtyp)
 		quota := QuotaInfos[apps]
+
 		if strings.EqualFold(styp, "up") {
+
 			if valeOfFloat64 > quota.MaxThreshold*0.01 {
 				return true, nil
 			}
 		} else if strings.EqualFold(styp, "down") {
+
 			if valeOfFloat64 < quota.MinThreshold*0.01 {
 				return true, nil
 			}
