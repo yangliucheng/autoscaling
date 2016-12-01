@@ -5,6 +5,7 @@ type PolicyConfig struct {
 	Prometheuss Prometheus `json:"prometheus"`
 	Mesoss      Mesos      `json:"mesos"`
 	Marathons   Marathon   `json:"marathon"`
+	Logs        Log        `json:"log"`
 }
 
 type DB struct {
@@ -25,4 +26,9 @@ type Mesos struct {
 
 type Marathon struct {
 	MarathonName string `json:"marathon_name"`
+}
+
+type Log struct {
+	Level string `json:"level"`
+	File  string `json:"file"`
 }

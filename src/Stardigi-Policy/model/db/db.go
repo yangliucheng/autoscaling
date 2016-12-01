@@ -53,6 +53,7 @@ func (dbClient *DBclient) Insert(object interface{}) {
 	if err != nil {
 		fmt.Println("插入数据看失败", err)
 	}
+	defer stmt.Close()
 	_, err = stmt.Exec(value...)
 	if err != nil {
 		fmt.Println("插入数据看失败", err)

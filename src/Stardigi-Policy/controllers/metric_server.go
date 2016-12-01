@@ -88,6 +88,7 @@ func GetMetricFromPrometheus(policy *config.PolicyConfig, rule db.AppScaleRule, 
 	// 存储查询结果
 	// 同时必须写一个循环判断map内结果是否完整
 	metrics := make(map[string]*httpc.Cmth)
+	// metrics := new(utils.SyncMap)
 	// 为每个查询启动一个协程，并通过通道去控制查询是否结束
 
 	var lock sync.RWMutex
@@ -136,7 +137,7 @@ func GetMetricFromPrometheus(policy *config.PolicyConfig, rule db.AppScaleRule, 
 	go func(rule db.AppScaleRule) {
 		for {
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(1 * time.Millisecond):
 				if len(metrics) == 4 {
 					lock.RLock()
 					appInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)

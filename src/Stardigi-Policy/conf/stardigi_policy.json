@@ -14,5 +14,9 @@
 	},
 	"marathon" : {
 		"marathon_name" : "dcos"
+	},
+	"log" : {
+		"level" : "ERROR",
+		"file" : "/home/paas/test.log"
 	}
 }
