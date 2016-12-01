@@ -413,6 +413,9 @@ func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, err
 
 	metricsData := metrics[mtyp]
 
+	if metricsData.Datas == nil {
+		return false, nil
+	}
 	if len(metricsData.Datas.Results) == 0 {
 		err := errors.New("获取指标信息失败")
 		fmt.Println("从Prometheus查询到的", mtyp, "数据为空,应用信息：", app)
