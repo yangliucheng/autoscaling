@@ -413,7 +413,8 @@ func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, err
 
 	metricsData := metrics[mtyp]
 
-	if metricsData.Datas == nil {
+	if metricsData == nil {
+		fmt.Println("=====metricsData由于某种原因变成空指针====")
 		return false, nil
 	}
 	if len(metricsData.Datas.Results) == 0 {

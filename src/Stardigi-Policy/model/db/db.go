@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"time"
 )
 
 var (
@@ -18,7 +19,6 @@ type DBclient struct {
 }
 
 func SetDBsqler(name string, sqler Sqler) {
-
 	DBsqler[name] = sqler
 }
 
@@ -27,14 +27,33 @@ func GetDBsqker(name string) Sqler {
 	return DBsqler[name]
 }
 
-func NewDBClient(dbType, dataSourceName string) *DBclient {
+func NewDBClient(dbType, dataSourceName string) {
 
+	dbClient := new(DBclient)
+	dbClient = dbClient.newDBClient(dbType, dataSourceName)
+
+	go func(dbType, dataSourceName string, dbClient *DBclient) {
+		for {
+			select {
+			case <-time.After(1 * time.Second):
+				if dbClient.Db.Ping() != nil {
+					dbClient = dbClient.newDBClient(dbType, dataSourceName)
+				}
+			}
+		}
+	}(dbType, dataSourceName, dbClient)
+
+}
+
+func (dbClient *DBclient) newDBClient(dbType, dataSourceName string) *DBclient {
 	db, err := sql.Open(dbType, dataSourceName)
 	if err != nil {
 		fmt.Println("数据库初始化失败，错误信息：", err)
 	}
+	db.SetMaxOpenConns(2000)
+	db.SetMaxIdleConns(1000)
 
-	dbClient := &DBclient{
+	dbClient = &DBclient{
 		Db: db,
 	}
 	SetDBsqler(dbType, dbClient)
