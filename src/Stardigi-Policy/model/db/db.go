@@ -9,8 +9,13 @@ import (
 )
 
 var (
-	DBsqler = make(map[string]Sqler)
+	// DBsqler = make(map[string]Sqler)
+	DBsqler *utils.SyncMap
 )
+
+func init() {
+	DBsqler = utils.NewSyncMap()
+}
 
 type DBclient struct {
 	object interface{}
@@ -19,12 +24,13 @@ type DBclient struct {
 }
 
 func SetDBsqler(name string, sqler Sqler) {
-	DBsqler[name] = sqler
+	DBsqler.Set(name, sqler)
 }
 
 func GetDBsqker(name string) Sqler {
 
-	return DBsqler[name]
+	sqler, _ := DBsqler.Get(name)
+	return sqler.(Sqler)
 }
 
 func NewDBClient(dbType, dataSourceName string) {
