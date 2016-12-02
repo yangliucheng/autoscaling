@@ -20,11 +20,13 @@ import (
 	"time"
 )
 
-var LastScale *utils.SyncMap
-var LastCollect *utils.SyncMap
+var (
+	LastScale   *utils.SyncMap
+	LastCollect *utils.SyncMap
 
-// 用于判断当前正扩缩容的规则是否完成，或者是否移除
-var scaling *utils.SyncMap
+	// 用于判断当前正扩缩容的规则是否完成，或者是否移除
+	scaling *utils.SyncMap
+)
 
 func init() {
 	LastScale = utils.NewSyncMap()
@@ -60,12 +62,14 @@ func SRun(policy *config.PolicyConfig) {
 		case ruleUp := <-RuleUpChan:
 			// 执行扩容操作
 			//根据app_id和marathon_name从Prometheus获取监控数据
+			// fmt.Println(ruleUp)
 			scaleJobs(ruleUp, policy)
 		case ruleDown := <-RuleDownChan:
 			// fmt.Println(ruleDown)
 			// 执行缩容操作
 			// 问题：速度太快,导致一条规则多次加入扩缩容的策略
 			// 考虑添加控制语句要求上次规则必须使用完毕
+			// fmt.Println(ruleDown)
 			scaleJobs(ruleDown, policy)
 
 		case <-signals:
@@ -432,16 +436,16 @@ func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, err
 		}
 		// 获取配额信息
 		apps := utils.StringJoin(app, mtyp)
-		quota := QuotaInfos[apps]
+		quota, _ := QuotaInfos.Get(apps)
 
 		if strings.EqualFold(styp, "up") {
 
-			if valeOfFloat64 > quota.MaxThreshold*0.01 {
+			if valeOfFloat64 > quota.(db.QuotaInfo).MaxThreshold*0.01 {
 				return true, nil
 			}
 		} else if strings.EqualFold(styp, "down") {
 
-			if valeOfFloat64 < quota.MinThreshold*0.01 {
+			if valeOfFloat64 < quota.(db.QuotaInfo).MinThreshold*0.01 {
 				return true, nil
 			}
 		}

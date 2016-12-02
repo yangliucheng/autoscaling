@@ -30,10 +30,14 @@ quota_info
 var (
 	RuleUpChan   = make(chan []db.AppScaleRule, 1)
 	RuleDownChan = make(chan []db.AppScaleRule, 1)
-	QuotaInfos   = make(map[string]db.QuotaInfo, 0)
+	// QuotaInfos   = make(map[string]db.QuotaInfo, 0)
+	QuotaInfos *utils.SyncMap
+	mutex      sync.Mutex
 )
 
-var mutex sync.Mutex
+func init() {
+	QuotaInfos = utils.NewSyncMap()
+}
 
 func PRun() {
 	// 收集错误信息，写入日志
@@ -49,7 +53,7 @@ func PRun() {
 		// 初始化
 		for {
 			select {
-			case <-time.After(5 * time.Second):
+			case <-time.After(1 * time.Second):
 				// finishRule由scale模块控制
 				if len(RuleUpChan) == 0 && len(RuleDownChan) == 0 {
 
@@ -151,11 +155,11 @@ func GetRuleFromDB(ruleUpChan, ruleDownChan chan []db.AppScaleRule, error_c chan
 	waitMysql.Wait()
 }
 
-func formatQuota(quota map[string]db.QuotaInfo, quotaInfos []db.QuotaInfo) {
+func formatQuota(quota *utils.SyncMap, quotaInfos []db.QuotaInfo) {
 
 	for _, value := range quotaInfos {
 		appInfo := utils.StringJoin(value.MarathonName, value.AppId, value.RuleType)
-		quota[appInfo] = value
+		quota.Set(appInfo, value)
 	}
 }
 
