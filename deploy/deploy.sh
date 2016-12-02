@@ -5,6 +5,7 @@ set -ex
 ###############################
 #        CONSTANT             #
 ###############################
+IF_ENABLE_SYSTEMD=$1
 PROGRAM=autoscaling
 CURRENT_DIR=$(cd "$(dirname "$0")"; pwd)
 PAAS_DIR=/home/paas
@@ -34,9 +35,28 @@ function install_() {
 	cd -
 }
 
+function sytemd() {
+	if ${IF_ENABLE_SYSTEMD};then
+		return
+	fi
+		touch /etc/sytemd/stardigi.service
+		cat >> /etc/sytemd/stardigi.service <<EOF
+		[Unit]
+		[Service]
+		PIDFile=/home/paas/autoscaling/run/autoscaling.pid
+		ExecStop=/home/paas/autoscaling/cmd/scli.sh start
+		ExecStart=/home/paas/autoscaling/cmd/scli.sh stop
+		[Install]
+        WantedBy=multi-user.target
+EOF	 
+
+    systemctl enable stardigi.service
+}
+
 function main() {
 	pre
 	install_
+	sytemd $1
 }
 
 ###############################

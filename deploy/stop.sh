@@ -9,6 +9,7 @@ function stop() {
     fi
 
 	kill=`ps | grep ${APP_NAME} | grep -v grep | awk '{print $1}' |xargs kill -9`
+	rm /home/paas/autoscaling/run/autoscaling.pid
 }
 
 function main() {
