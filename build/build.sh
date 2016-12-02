@@ -11,6 +11,7 @@ HOME_DIR=${CURRENT_DIR}/..
 CODE_DIR=${HOME_DIR}/src/Stardigi-Policy
 BIN_DIR=${HOME_DIR}/bin
 PACKAGE_DIR=${BIN_DIR}/autoscaling
+CMD_DIR=${PACKAGE_DIR}/cmd
 VERSION=${BIN_DIR}/${VERSION_NAME}-v1.1
 export GOPATH=$HOME_DIR
 
@@ -29,6 +30,7 @@ function pre_build() {
     fi
     mkdir -p -m 700 ${PACKAGE_DIR}
     mkdir -p -m 700 ${VERSION}
+    mkdir -p -m 700 ${CMD_DIR}
 }
 
 function build() {
@@ -45,8 +47,15 @@ function tar_package() {
     if [ -d "conf/" ];then
         cp -rf conf/ ${PACKAGE_DIR}
         cp conf/stardigi_policy.json ${VERSION}
-    fi
+    fi    
     cd -
+
+    cd ${HOME_DIR}/deploy
+    cp start.sh ${CMD_DIR}
+    cp stop.sh ${CMD_DIR}
+    cp scli.sh ${CMD_DIR}
+    cd -
+
     cd ${BIN_DIR}
     if [ -d "autoscaling/" ];then
         tar -zcvf autoscaling.tgz autoscaling/
