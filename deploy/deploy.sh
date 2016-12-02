@@ -34,16 +34,9 @@ function install_() {
 	cd -
 }
 
-function run() {
-	cd ${RUN_DIR}
-	nohup ./Stardigi-Policy &
-	cd -
-}
-
 function main() {
 	pre
 	install_
-	run
 }
 
 ###############################
