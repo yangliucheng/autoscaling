@@ -27,10 +27,10 @@ var (
 )
 
 var (
-	MetricsUp   = make(chan map[string]map[string]*httpc.Cmth, 1)
-	MetricsDown = make(chan map[string]map[string]*httpc.Cmth, 1)
-	RulesUp     = make(chan db.AppScaleRule, 1)
-	RulesDown   = make(chan db.AppScaleRule, 1)
+	MetricsUp   = make(chan map[string]map[string]*httpc.Cmth, 0)
+	MetricsDown = make(chan map[string]map[string]*httpc.Cmth, 0)
+	RulesUp     = make(chan db.AppScaleRule, 0)
+	RulesDown   = make(chan db.AppScaleRule, 0)
 )
 
 func MRun(policy *config.PolicyConfig) {
