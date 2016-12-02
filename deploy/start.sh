@@ -11,16 +11,16 @@ function pre() {
 }
 
 function run() {
-	cd ${RUN_DIR}
-	kill=`ps | grep ${APP_NAME} | grep -v grep | awk '{print $1}' |xargs kill -9`
-	nohup ./Stardigi-Policy &
-	echo "$!" > ${PID_DIR}/autoscaling.pid
-	cd -
+    cd ${RUN_DIR}
+    kill=`ps | grep ${APP_NAME} | grep -v grep | awk '{print $1}' |xargs kill -9`
+    nohup ./Stardigi-Policy &
+    echo "$!" > ${PID_DIR}/autoscaling.pid
+    cd -
 }
 
 function main() {
-	pre
-	run
+    pre
+    run
 }
 
 main
