@@ -12,6 +12,10 @@
 * bash deploy/deploy.sh
 * ps -ef | grep Stardigi-Policy查看程序的运行状态
 
+# RUN OR STOP
+* bash scli.sh start
+* bash scli.sh stop
+
 # questions remaining
 
 ## 日志记录
