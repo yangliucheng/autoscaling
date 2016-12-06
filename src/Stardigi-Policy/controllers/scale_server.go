@@ -62,10 +62,8 @@ func SRun(policy *config.PolicyConfig) {
 		case ruleUp := <-RuleUpChan:
 			// 执行扩容操作
 			//根据app_id和marathon_name从Prometheus获取监控数据
-			// fmt.Println(ruleUp)
 			scaleJobs(ruleUp, policy)
 		case ruleDown := <-RuleDownChan:
-			// fmt.Println(ruleDown)
 			// 执行缩容操作
 			// 问题：速度太快,导致一条规则多次加入扩缩容的策略
 			// 考虑添加控制语句要求上次规则必须使用完毕
@@ -198,7 +196,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
  */
 func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan bool) {
 	/***************获取marathon地址***************/
-	marathonEndpoint := make(chan string, 0)
+	marathonEndpoint := make(chan string, 1)
 	marathon_name := os.Getenv("marathon_name")
 	marathon_url := os.Getenv("marathon_url")
 	marathon_endpoint := utils.StringJoin(marathon_url, "/", marathon_name)
@@ -278,6 +276,7 @@ func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan 
 			//已经获取到maramthon的地址
 			case m := <-marathonEndpoint:
 				// 获取当前的实例数
+				fmt.Println("=======marathon地址======", m)
 				starRequestGen := httpc.NewStarRequestGen(m, routers.MarathonRouter)
 				responseGetAppsChan, errGetAppsChan := starRequestGen.DoHttpRequest("GetApps", httpc.Mapstring{"app_id": rule.AppId}, nil, nil, "")
 				errChan = errGetAppsChan
@@ -348,6 +347,7 @@ func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map
 		if flag {
 			counter["memory"] <- true
 			//计数器加一
+			fmt.Println("memory信息满足,扩缩容类型为: ", rule.ScaleType)
 			event := utils.StringJoin("memory信息满足,扩缩容类型为: ", rule.ScaleType)
 			InsertLog(event, len(counter["memory"]), rule)
 		} else {
@@ -367,6 +367,7 @@ func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map
 		if flag {
 			//计数器加一
 			counter["cpu"] <- true
+			fmt.Println("cpu信息满足,扩缩容类型为: ", rule.ScaleType)
 			event := utils.StringJoin("cpu信息满足,扩缩容类型为: ", rule.ScaleType)
 			InsertLog(event, len(counter["cpu"]), rule)
 		} else {
@@ -385,6 +386,7 @@ func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map
 		if flag {
 			//计数器加一
 			counter["thread"] <- true
+			fmt.Println("thread信息满足,扩缩容类型为: ", rule.ScaleType)
 			event := utils.StringJoin("thread信息满足,扩缩容类型为: ", rule.ScaleType)
 			InsertLog(event, len(counter["thread"]), rule)
 		} else {
@@ -403,6 +405,7 @@ func matchJobs(rule db.AppScaleRule, metrics map[string]*httpc.Cmth, counter map
 		if flag {
 			//计数器加一
 			counter["ha_queue"] <- true
+			fmt.Println("ha_queue信息满足,扩缩容类型为: ", rule.ScaleType)
 			event := utils.StringJoin("ha_queue信息满足,扩缩容类型为: ", rule.ScaleType)
 			InsertLog(event, len(counter["ha_queue"]), rule)
 		} else {
@@ -442,6 +445,7 @@ func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, err
 		// 获取配额信息
 		apps := utils.StringJoin(app, mtyp)
 		quota, ok := QuotaInfos.Get(apps)
+		fmt.Println("配额信息：", quota, "应用信息：", apps)
 		if !ok {
 			fmt.Println("配额表quato_info为空")
 			return false, nil

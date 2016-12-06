@@ -93,6 +93,7 @@ func GetMetricFromPrometheus(policy *config.PolicyConfig, rule db.AppScaleRule, 
 
 	var lock sync.RWMutex
 	for k, v := range metricDest {
+		fmt.Println("prometheus地址：", host, "类型：", k, "url:", v)
 		go func(metrics map[string]*httpc.Cmth, k, v string) {
 			responseChan, errChan := starRequestGen.DoHttpRequest("GetMetric", nil, nil, nil, v)
 			for {
@@ -106,7 +107,7 @@ func GetMetricFromPrometheus(policy *config.PolicyConfig, rule db.AppScaleRule, 
 					}
 					// json转bean
 					body, err := ioutil.ReadAll(response.Body)
-					// fmt.Println("========metric_server=========", string(body), "=>", k, "=>", v)
+					fmt.Println("========metric_server=========", string(body), "=>", k)
 					if err != nil {
 						errorsMrun <- err
 					}
