@@ -16,7 +16,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
+	// "sync"
 	"time"
 )
 
@@ -199,9 +199,9 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan bool) {
 	/***************获取marathon地址***************/
 	marathonEndpoint := make(chan string, 0)
-
+	marathon_name := os.Getenv("marathon_name")
 	marathon_url := os.Getenv("marathon_url")
-	marathon_endpoint := utils.StringJoin(marathon_url, "/", policy.Marathons.MarathonName)
+	marathon_endpoint := utils.StringJoin(marathon_url, "/", marathon_name)
 	marathonEndpoint <- marathon_endpoint
 	// "10.254.9.55:5050;10.254.9.56:5050;10.254.9.57:5050"
 	// mesosUrls := strings.Split(policy.Mesoss.MesosUrls, ";")

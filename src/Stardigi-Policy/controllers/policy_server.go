@@ -85,7 +85,8 @@ func GetRuleFromDB(ruleUpChan, ruleDownChan chan []db.AppScaleRule, error_c chan
 	go func(appScaleRule *db.AppScaleRule, appScaleRules []db.AppScaleRule, wait *sync.WaitGroup, error_c chan error) {
 		// 由于等待数据库完成查询和分离扩缩容信息
 		// switch == 1 means scale enable
-		err := s.QueryTable(appScaleRule).Filter("switch", "1").All(&appScaleRules)
+		marathon_name := os.Getenv("marathon_name")
+		err := s.QueryTable(appScaleRule).Filter("switch", "1").Filter("marathon_name", marathon_name).All(&appScaleRules)
 		if err != nil {
 			fmt.Println("查询数据库出错", err)
 			waitMysql.Done()

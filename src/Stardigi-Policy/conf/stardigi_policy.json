@@ -1,11 +1,11 @@
 {
 	"db": {
 	    "type": "mysql",
-	    "datasource": "root:123456@tcp(10.142.21.10:3306)/machine?charset=utf8&loc=Asia%2FShanghai"
+	    "datasource": "root:8cDcos11@tcp(10.33.220.32:3306)/machine?charset=utf8&loc=Asia%2FShanghai"
 	},
 	"prometheus" : {
-		"promethus_addr" : "10.142.21.10",
-		"promethus_port" : "9091",
+		"promethus_addr" : "10.33.204.24",
+		"promethus_port" : "9090",
 		"promethus_group" : "slave",
 		"promethus_job" : "dcos"
 	},
