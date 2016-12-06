@@ -154,11 +154,20 @@ func GetMetricFromPrometheus(policy *config.PolicyConfig, rule db.AppScaleRule, 
 
 /**
  * 定义一个通道，写入appi_id，
- */
+  f_app_id = app_id.replace("/","_")
+    f_app_id = f_app_id[1:]
+"query=haproxy_server_current_queue%7Bbackend%3D~%27%5E" + f_app_id + "_"+marathon_name+".*%27%7D"
+"ha_queue": `haproxy_server_current_queue{backend=~'^{{app_id}}_{{marathon_name}}.*'}`,
+urlParam := map[string]string{"{{app_id}}": rule.AppId, "{{marathon_name}}": rule.MarathonName}
+*/
 func SetMetricUrl(origin map[string]string, dest map[string]string, param map[string]string) {
 
 	for mk, mv := range origin {
 		for pk, pv := range param {
+			if strings.EqualFold(mk, "ha_queue") {
+				pv = strings.Replace(pv, "/", "_", -1)
+				pv = pv[1:]
+			}
 			mv = strings.Replace(mv, pk, pv, -1)
 		}
 		urlEncode := utils.UrlBase64(mv)

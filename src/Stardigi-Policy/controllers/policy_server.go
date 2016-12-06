@@ -53,7 +53,7 @@ func PRun() {
 		// 初始化
 		for {
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(5 * time.Second):
 				// finishRule由scale模块控制
 				if len(RuleUpChan) == 0 && len(RuleDownChan) == 0 {
 

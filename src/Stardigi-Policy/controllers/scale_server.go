@@ -97,6 +97,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 		// 每一条规则
 		//判断有没有达到扩缩容冷切时间
 		go func(rule db.AppScaleRule) {
+
 			appInfo := utils.StringJoin(rule.MarathonName, rule.AppId, rule.ScaleType)
 			var lastTimeScale int64 = 0
 			currentTimeScale := time.Now().Unix()
@@ -197,68 +198,72 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
  */
 func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan bool) {
 	/***************获取marathon地址***************/
-	marathonUrl := make(chan string, 0)
+	marathonEndpoint := make(chan string, 0)
+
+	marathon_url := os.Getenv("marathon_url")
+	marathon_endpoint := utils.StringJoin(marathon_url, "/", policy.Marathons.MarathonName)
+	marathonEndpoint <- marathon_endpoint
 	// "10.254.9.55:5050;10.254.9.56:5050;10.254.9.57:5050"
-	mesosUrls := strings.Split(policy.Mesoss.MesosUrls, ";")
+	// mesosUrls := strings.Split(policy.Mesoss.MesosUrls, ";")
 
-	// 启动异步请求，获取marathon地址
-	finMesos := make(chan bool, 1)
-	var once sync.Once
-	for _, v := range mesosUrls {
+	// // 启动异步请求，获取marathon地址
+	// finMesos := make(chan bool, 1)
+	// var once sync.Once
+	// for _, v := range mesosUrls {
 
-		go func(v string, marathonUrl chan string) {
-			host := utils.StringJoin("http://", v)
-			starRequestGen := httpc.NewStarRequestGen(host, routers.MesosRouter)
-			responseMesosChan, errChan := starRequestGen.DoHttpRequest("GetMarathonUrl", nil, nil, nil, "")
+	// 	go func(v string, marathonUrl chan string) {
+	// 		host := utils.StringJoin("http://", v)
+	// 		starRequestGen := httpc.NewStarRequestGen(host, routers.MesosRouter)
+	// 		responseMesosChan, errChan := starRequestGen.DoHttpRequest("GetMarathonUrl", nil, nil, nil, "")
 
-			for {
-				select {
-				// 并发执行http请求，只要name属性和policy.Marathons.MarathonName则退出
-				case f := <-finMesos:
-					// 保证其他goroutine正常关闭
-					finMesos <- f
-					// fmt.Println("从ip", v, "获取marathon地址的协程即将完成")
-					return
-				case err := <-errChan:
-					fmt.Println("从messos获取marathon的url失败,错误信息是： ", err, "messos的地址是：", v)
-					return
-				case response := <-responseMesosChan:
-					// 处理response请求
-					var messos httpc.Mesoses
-					if response == nil {
-						break
-					}
-					byt, err := ioutil.ReadAll(response.Body)
-					if err != nil {
-						errChan <- err
-					}
-					defer response.Body.Close()
-					err = json.Unmarshal(byt, &messos)
-					if err != nil {
-						errChan <- err
-					}
-					if len(messos.Frameworks) == 0 {
-						err := errors.New("从messos获取marathon的地址失败，frameworks为空")
-						errChan <- err
-					}
-					for _, framwork := range messos.Frameworks {
-						if strings.EqualFold(framwork.Name, policy.Marathons.MarathonName) {
+	// 		for {
+	// 			select {
+	// 			// 并发执行http请求，只要name属性和policy.Marathons.MarathonName则退出
+	// 			case f := <-finMesos:
+	// 				// 保证其他goroutine正常关闭
+	// 				finMesos <- f
+	// 				// fmt.Println("从ip", v, "获取marathon地址的协程即将完成")
+	// 				return
+	// 			case err := <-errChan:
+	// 				fmt.Println("从messos获取marathon的url失败,错误信息是： ", err, "messos的地址是：", v)
+	// 				return
+	// 			case response := <-responseMesosChan:
+	// 				// 处理response请求
+	// 				var messos httpc.Mesoses
+	// 				if response == nil {
+	// 					break
+	// 				}
+	// 				byt, err := ioutil.ReadAll(response.Body)
+	// 				if err != nil {
+	// 					errChan <- err
+	// 				}
+	// 				defer response.Body.Close()
+	// 				err = json.Unmarshal(byt, &messos)
+	// 				if err != nil {
+	// 					errChan <- err
+	// 				}
+	// 				if len(messos.Frameworks) == 0 {
+	// 					err := errors.New("从messos获取marathon的地址失败，frameworks为空")
+	// 					errChan <- err
+	// 				}
+	// 				for _, framwork := range messos.Frameworks {
+	// 					if strings.EqualFold(framwork.Name, policy.Marathons.MarathonName) {
 
-							// 只会执行一次
-							once.Do(func() {
-								marathonUrl <- framwork.MarathonUrl
+	// 						// 只会执行一次
+	// 						once.Do(func() {
+	// 							marathonUrl <- framwork.MarathonUrl
 
-							})
+	// 						})
 
-							fmt.Println("获取marathon的host成功：", framwork.MarathonUrl)
-							finMesos <- true
-							break
-						}
-					}
-				}
-			}
-		}(v, marathonUrl)
-	}
+	// 						fmt.Println("获取marathon的host成功：", framwork.MarathonUrl)
+	// 						finMesos <- true
+	// 						break
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}(v, marathonUrl)
+	// }
 
 	/***************获取到marathon地址后，执行扩容操作，整个操作设置为发布订阅模式***************/
 
@@ -271,7 +276,7 @@ func scaleJob(policy *config.PolicyConfig, rule db.AppScaleRule, finScaled chan 
 		for {
 			select {
 			//已经获取到maramthon的地址
-			case m := <-marathonUrl:
+			case m := <-marathonEndpoint:
 				// 获取当前的实例数
 				starRequestGen := httpc.NewStarRequestGen(m, routers.MarathonRouter)
 				responseGetAppsChan, errGetAppsChan := starRequestGen.DoHttpRequest("GetApps", httpc.Mapstring{"app_id": rule.AppId}, nil, nil, "")
