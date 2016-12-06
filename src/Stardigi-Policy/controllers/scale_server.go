@@ -441,7 +441,11 @@ func matchJob(metrics map[string]*httpc.Cmth, app, mtyp, styp string) (bool, err
 		}
 		// 获取配额信息
 		apps := utils.StringJoin(app, mtyp)
-		quota, _ := QuotaInfos.Get(apps)
+		quota, ok := QuotaInfos.Get(apps)
+		if !ok {
+			fmt.Println("配额表quato_info为空")
+			return false, nil
+		}
 
 		if strings.EqualFold(styp, "up") {
 
