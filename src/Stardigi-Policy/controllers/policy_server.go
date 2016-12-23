@@ -56,7 +56,7 @@ func PRun() {
 			case <-time.After(5 * time.Second):
 				// finishRule由scale模块控制
 				if len(RuleUpChan) == 0 && len(RuleDownChan) == 0 {
-
+					fmt.Println("==开始查询规则===")
 					GetRuleFromDB(RuleUpChan, RuleDownChan, error_c)
 				}
 

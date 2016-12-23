@@ -62,12 +62,14 @@ func SRun(policy *config.PolicyConfig) {
 		case ruleUp := <-RuleUpChan:
 			// 执行扩容操作
 			//根据app_id和marathon_name从Prometheus获取监控数据
+			fmt.Println("==查询扩容规则完成==", ruleUp)
 			scaleJobs(ruleUp, policy)
 		case ruleDown := <-RuleDownChan:
 			// 执行缩容操作
 			// 问题：速度太快,导致一条规则多次加入扩缩容的策略
 			// 考虑添加控制语句要求上次规则必须使用完毕
 			// fmt.Println(ruleDown)
+			fmt.Println("==查询缩容规则完成==", ruleDown)
 			scaleJobs(ruleDown, policy)
 
 		case <-signals:
@@ -175,6 +177,7 @@ func scaleJobs(rules []db.AppScaleRule, policy *config.PolicyConfig) {
 					RulesUp <- rule
 					// Metrics为无缓存通道
 					metrics := <-MetricsUp
+					fmt.Println("==从prometheus查询到指标信息==", metrics)
 					LastCollect.Set(appInfo, time.Now().Unix())
 					//
 					matchJobs(rule, metrics[appInfo], counter)

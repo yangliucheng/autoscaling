@@ -45,8 +45,10 @@ func MRun(policy *config.PolicyConfig) {
 			select {
 			// 只要scale模块要求查询数据，则执行操作
 			case rulesUp := <-RulesUp:
+				fmt.Println("==开始从Prometheus查询扩容需要的指标信息==")
 				RuleJob(policy, rulesUp, errorsMrun)
 			case rulesDown := <-RulesDown:
+				fmt.Println("==开始从Prometheus查询缩容需要的指标信息==")
 				RuleJob(policy, rulesDown, errorsMrun)
 			case err := <-errorsMrun:
 				fmt.Println("查询指标信息发生错误，错误信息：", err)

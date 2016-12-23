@@ -58,11 +58,12 @@ func (star *StarRequestGen) CreateStarRequest(handler string, param Mapstring, b
 	}
 
 	endpoint := utils.StringJoin(star.Host, path)
-
 	// 设置表单参数
 	if !strings.EqualFold(fParam, "") {
 		endpoint = utils.StringJoin(endpoint, "?query=", fParam)
 	}
+
+	fmt.Println("===发送HTTP请求的地址是==", endpoint)
 
 	request, err := http.NewRequest(router.Method, endpoint, body)
 
